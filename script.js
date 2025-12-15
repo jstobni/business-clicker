@@ -168,6 +168,7 @@ function updateAllDisplays() {
 // Upgrade business
 function upgradeBusiness(index) {
     const biz = ownedBusinesses[index];
+    if (biz.type === 'delivery') return; // Show nothing for Delivery Fleet (and others that aren't upgraded)
     if (biz.level >= upgradeCap || money < biz.upgradeCost) return;
 
     money -= biz.upgradeCost;
@@ -228,7 +229,8 @@ function renderOwnedBusinesses() {
                         <small class="text-white-50">${bizType.name}</small>
                     </div>
                     <div class="card-body text-center py-4">
-                        <p class="mb-2 fs-5"><strong>Lv ${biz.level}</strong></p>
+                        ${biz.type !== 'delivery' ? `<p class="mb-2 fs-5"><strong>Lv ${biz.level}</strong></p>` : ''}
+                        ${biz.type === 'delivery' ? `<p class="mb-2 fs-5"><strong>Fleet: ${biz.fleet.length}/${biz.fleetSlots}</strong></p>` : ''}
                         <p class="mb-0 text-success fs-4">$${biz.incomePerSec.toFixed(2)}/sec</p>
                     </div>
                 </div>
@@ -262,11 +264,21 @@ function openBusinessDetail(index) {
     const biz = ownedBusinesses[index];
     const bizType = availableBusinessTypes.find(t => t.id === biz.type);
 
+    // Header name
     document.getElementById('detailName').textContent = biz.customName || bizType.name + " #" + (index + 1);
 
-    document.getElementById('detailLevel').textContent = `${biz.level}/20`;
+    // Income (always shown)
     document.getElementById('detailIncome').textContent = `$${biz.incomePerSec.toFixed(2)}`;
 
+    // Level - Only show for lemonade (not delivery)
+    const levelEl = document.getElementById('detailLevel');
+    if (biz.type !== 'delivery') {
+        levelEl.textContent = `${biz.level}/20`;
+    } else {
+        levelEl.textContent = '';  // Blank for delivery
+    }
+
+    // Calculate upgradeSpent (used for invested/value)
     let upgradeSpent = 0;
     let tempCost = businessUpgradeStart;
     for (let i = 1; i <= biz.level; i++) {
@@ -277,11 +289,13 @@ function openBusinessDetail(index) {
     document.getElementById('detailInvested').textContent = `$${totalInvested.toFixed(2)}`;
     document.getElementById('detailEarned').textContent = `$${biz.totalEarned.toFixed(2)}`;
 
+    // Current sell value
     const baseRecoup = bizType.baseCost * 0.5;
     const upgradeRecoup = upgradeSpent * 0.75;
     const currentValue = Math.round((baseRecoup + upgradeRecoup) * 100) / 100;
     document.getElementById('detailValue').textContent = `$${currentValue.toFixed(2)}`;
 
+    // Net Profit & Profit %
     const netProfit = biz.totalEarned + currentValue - totalInvested;
     const netProfitEl = document.getElementById('detailNetProfit');
     netProfitEl.textContent = netProfit >= 0 ? `+$${netProfit.toFixed(2)}` : `-$${Math.abs(netProfit).toFixed(2)}`;
@@ -292,23 +306,29 @@ function openBusinessDetail(index) {
     profitPercentEl.textContent = profitPercent >= 0 ? `+${profitPercent.toFixed(1)}%` : `${profitPercent.toFixed(1)}%`;
     profitPercentEl.className = profitPercent >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
 
+    // Upgrade Section - Only for lemonade (not delivery)
     const upgradeSection = document.getElementById('upgradeSection');
-    if (biz.level < upgradeCap) {
-        const canUpgrade = money >= biz.upgradeCost;
-        upgradeSection.innerHTML = `
-            <button class="btn btn-success btn-lg" ${!canUpgrade ? 'disabled' : ''} id="detailUpgradeBtn">
-                Upgrade ($${biz.upgradeCost.toFixed(2)})
-            </button>
-            <p class="mt-2 text-muted small">Next level income: $${(biz.incomePerSec * businessIncMult).toFixed(2)}/sec</p>
-        `;
-        document.getElementById('detailUpgradeBtn').onclick = () => {
-            upgradeBusiness(index);
-            openBusinessDetail(index);
-        };
+    if (biz.type !== 'delivery') {
+        if (biz.level < upgradeCap) {
+            const canUpgrade = money >= biz.upgradeCost;
+            upgradeSection.innerHTML = `
+                <button class="btn btn-success btn-lg" ${!canUpgrade ? 'disabled' : ''} id="detailUpgradeBtn">
+                    Upgrade ($${biz.upgradeCost.toFixed(2)})
+                </button>
+                <p class="mt-2 text-muted small">Next level income: $${(biz.incomePerSec * businessIncMult).toFixed(2)}/sec</p>
+            `;
+            document.getElementById('detailUpgradeBtn').onclick = () => {
+                upgradeBusiness(index);
+                openBusinessDetail(index);
+            };
+        } else {
+            upgradeSection.innerHTML = `<span class="badge bg-success fs-4 px-4 py-3">MAX LEVEL</span>`;
+        }
     } else {
-        upgradeSection.innerHTML = `<span class="badge bg-success fs-4 px-4 py-3">MAX LEVEL</span>`;
+        upgradeSection.innerHTML = ''; // Hide upgrade section for delivery
     }
 
+    // Sell preview
     document.getElementById('sellPreview').textContent = 
         `Sell for $${currentValue.toFixed(2)} (50% of purchase + 75% of $${upgradeSpent.toFixed(2)} in upgrades)`;
 
@@ -317,6 +337,7 @@ function openBusinessDetail(index) {
         detailModalInstance?.hide();
     };
 
+    // Rename
     document.getElementById('renameButton').onclick = () => {
         const newName = prompt("Enter new name:", biz.customName || bizType.name);
         if (newName && newName.trim()) {
@@ -326,23 +347,27 @@ function openBusinessDetail(index) {
         }
     };
 
-    // Delivery fleet section
+    // Delivery Fleet Section
     const fleetSection = document.getElementById('fleetSection');
     if (biz.type === 'delivery') {
         fleetSection.style.display = 'block';
-        document.getElementById('detailFleetSlots').textContent = biz.fleetSlots;
+        document.getElementById('detailFleetSlots').textContent = `${biz.fleet.length}/${biz.fleetSlots}`; // Show current/max
 
         const fleetList = document.getElementById('fleetList');
         fleetList.innerHTML = '';
-        biz.fleet.forEach(v => {
-            fleetList.innerHTML += `
-                <div class="list-group-item">
-                    <strong>${v.name}</strong> (${v.tier})<br>
-                    Income: $${v.income.toFixed(2)}/sec<br>
-                    Range left: ${v.range.toFixed(0)} km
-                </div>
-            `;
-        });
+        if (biz.fleet.length === 0) {
+            fleetList.innerHTML = '<p class="text-muted">No vehicles yet. Buy some!</p>';
+        } else {
+            biz.fleet.forEach(v => {
+                fleetList.innerHTML += `
+                    <div class="list-group-item">
+                        <strong>${v.name}</strong> (${v.tier})<br>
+                        Income: $${v.income.toFixed(2)}/sec<br>
+                        Range left: ${v.range.toFixed(0)} km
+                    </div>
+                `;
+            });
+        }
 
         document.getElementById('buyCarBtn').onclick = () => {
             if (biz.fleet.length >= biz.fleetSlots) {
@@ -350,7 +375,7 @@ function openBusinessDetail(index) {
                 return;
             }
             const promptText = deliveryVehicleModels.map((m, i) => 
-                `${i+1}. ${m.name} ($${m.cost}, $${m.income}/sec, ${m.range} km)`
+                `${i+1}. ${m.name} ($${m.cost}, $${m.income}/sec, ${m.range / 3600}h)`
             ).join("\n");
             const input = prompt(`Choose model (1-${deliveryVehicleModels.length}):\n${promptText}`);
             const modelIndex = parseInt(input) - 1;
@@ -440,4 +465,9 @@ clickUpgradeCostDisplay.textContent = clickUpgradeCost.toFixed(2);
 
 updateTotalIPS();
 updateUpgradeButton();
+
 renderOwnedBusinesses();
+
+
+
+
