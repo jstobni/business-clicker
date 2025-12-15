@@ -168,6 +168,7 @@ function updateAllDisplays() {
 // Upgrade business
 function upgradeBusiness(index) {
     const biz = ownedBusinesses[index];
+    if (biz.type === 'delivery') return; // Show nothing for Delivery Fleet (and others that aren't upgraded)
     if (biz.level >= upgradeCap || money < biz.upgradeCost) return;
 
     money -= biz.upgradeCost;
@@ -228,7 +229,7 @@ function renderOwnedBusinesses() {
                         <small class="text-white-50">${bizType.name}</small>
                     </div>
                     <div class="card-body text-center py-4">
-                        <p class="mb-2 fs-5"><strong>Lv ${biz.level}</strong></p>
+                        ${biz.type !== 'delivery' ? `<p class="mb-2 fs-5"><strong>Lv ${biz.level}</strong></p>` : ''}
                         <p class="mb-0 text-success fs-4">$${biz.incomePerSec.toFixed(2)}/sec</p>
                     </div>
                 </div>
@@ -264,7 +265,6 @@ function openBusinessDetail(index) {
 
     document.getElementById('detailName').textContent = biz.customName || bizType.name + " #" + (index + 1);
 
-    document.getElementById('detailLevel').textContent = `${biz.level}/20`;
     document.getElementById('detailIncome').textContent = `$${biz.incomePerSec.toFixed(2)}`;
 
     let upgradeSpent = 0;
@@ -292,22 +292,26 @@ function openBusinessDetail(index) {
     profitPercentEl.textContent = profitPercent >= 0 ? `+${profitPercent.toFixed(1)}%` : `${profitPercent.toFixed(1)}%`;
     profitPercentEl.className = profitPercent >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
 
+    // Make conditional to not show on Delivery Fleet (and other businesses that don't require)
     const upgradeSection = document.getElementById('upgradeSection');
-    if (biz.level < upgradeCap) {
-        const canUpgrade = money >= biz.upgradeCost;
-        upgradeSection.innerHTML = `
-            <button class="btn btn-success btn-lg" ${!canUpgrade ? 'disabled' : ''} id="detailUpgradeBtn">
-                Upgrade ($${biz.upgradeCost.toFixed(2)})
-            </button>
-            <p class="mt-2 text-muted small">Next level income: $${(biz.incomePerSec * businessIncMult).toFixed(2)}/sec</p>
-        `;
-        document.getElementById('detailUpgradeBtn').onclick = () => {
-            upgradeBusiness(index);
-            openBusinessDetail(index);
-        };
-    } else {
-        upgradeSection.innerHTML = `<span class="badge bg-success fs-4 px-4 py-3">MAX LEVEL</span>`;
-    }
+    if (biz.type !== 'delivery') {
+        if (biz.level < upgradeCap) {
+            const canUpgrade = money >= biz.upgradeCost;
+            upgradeSection.innerHTML = `
+                <button class="btn btn-success btn-lg" ${!canUpgrade ? 'disabled' : ''} id="detailUpgradeBtn">
+                    Upgrade ($${biz.upgradeCost.toFixed(2)})
+                </button>
+                <p class="mt-2 text-muted small">Next level income: $${(biz.incomePerSec * businessIncMult).toFixed(2)}/sec</p>
+            `;
+            document.getElementById('detailUpgradeBtn').onclick = () => {
+                upgradeBusiness(index);
+                openBusinessDetail(index);
+            };
+        } else {
+            upgradeSection.innerHTML = `<span class="badge bg-success fs-4 px-4 py-3">MAX LEVEL</span>`;
+        }
+    else {
+        upgradeSection.innerHTML = ``; // Show nothing for businesses that don't need leveling
 
     document.getElementById('sellPreview').textContent = 
         `Sell for $${currentValue.toFixed(2)} (50% of purchase + 75% of $${upgradeSpent.toFixed(2)} in upgrades)`;
@@ -440,4 +444,5 @@ clickUpgradeCostDisplay.textContent = clickUpgradeCost.toFixed(2);
 
 updateTotalIPS();
 updateUpgradeButton();
+
 renderOwnedBusinesses();
