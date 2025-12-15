@@ -271,10 +271,11 @@ function openBusinessDetail(index) {
     document.getElementById('detailIncome').textContent = `$${biz.incomePerSec.toFixed(2)}`;
 
     // Level - Only show for lemonade (not delivery)
+    const levelEl = document.getElementById('detailLevel');
     if (biz.type !== 'delivery') {
-        document.getElementById('detailLevel').textContent = `${biz.level}/20`;
+        levelEl.textContent = `${biz.level}/20`;
     } else {
-        document.getElementById('detailLevel').textContent = '';  // Hide for delivery
+        levelEl.textContent = '';  // Blank for delivery
     }
 
     // Calculate upgradeSpent (used for invested/value)
@@ -466,6 +467,7 @@ updateTotalIPS();
 updateUpgradeButton();
 
 renderOwnedBusinesses();
+
 
 
 
