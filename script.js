@@ -298,7 +298,7 @@ function openBusinessDetail(index) {
     profitPercentEl.textContent = profitPercent >= 0 ? `+${profitPercent.toFixed(1)}%` : `${profitPercent.toFixed(1)}%`;
     profitPercentEl.className = profitPercent >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
 
-    // Upgrade Section - Only for lemonade (not delivery)
+        // Upgrade Section - Only for lemonade (not delivery)
     const upgradeSection = document.getElementById('upgradeSection');
     if (biz.type !== 'delivery') {
         if (biz.level < upgradeCap) {
@@ -459,4 +459,5 @@ updateTotalIPS();
 updateUpgradeButton();
 
 renderOwnedBusinesses();
+
 
