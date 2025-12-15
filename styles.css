@@ -12,3 +12,7 @@ body {
 .card-body .fs-4 {
     font-weight: bold;
 }
+
+* {
+    touch-action: manipulation;
+}
