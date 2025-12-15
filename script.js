@@ -270,6 +270,13 @@ function openBusinessDetail(index) {
     // Income (always shown)
     document.getElementById('detailIncome').textContent = `$${biz.incomePerSec.toFixed(2)}`;
 
+    // Level - Only show for lemonade (not delivery)
+    if (biz.type !== 'delivery') {
+        document.getElementById('detailLevel').textContent = `${biz.level}/20`;
+    } else {
+        document.getElementById('detailLevel').textContent = '';  // Hide for delivery
+    }
+
     // Calculate upgradeSpent (used for invested/value)
     let upgradeSpent = 0;
     let tempCost = businessUpgradeStart;
@@ -298,7 +305,7 @@ function openBusinessDetail(index) {
     profitPercentEl.textContent = profitPercent >= 0 ? `+${profitPercent.toFixed(1)}%` : `${profitPercent.toFixed(1)}%`;
     profitPercentEl.className = profitPercent >= 0 ? 'text-success fw-bold' : 'text-danger fw-bold';
 
-        // Upgrade Section - Only for lemonade (not delivery)
+    // Upgrade Section - Only for lemonade (not delivery)
     const upgradeSection = document.getElementById('upgradeSection');
     if (biz.type !== 'delivery') {
         if (biz.level < upgradeCap) {
@@ -459,5 +466,6 @@ updateTotalIPS();
 updateUpgradeButton();
 
 renderOwnedBusinesses();
+
 
 
