@@ -10,8 +10,8 @@ let totalIncomePerSecond = 0;
 const businessUpgradeStart = 25.00;
 const businessIncMult = 1.18;
 const businessCostMult = 1.13;
-const clickPowerMult = 1.18;
-const clickCostMult = 1.20;
+const clickPowerMult = 1.13;
+const clickCostMult = 1.22;
 const upgradeCap = 20;
 
 // Initial click upgrade cost
@@ -50,12 +50,27 @@ const availableBusinessTypes = [
 
 // Delivery Fleet Models
 const deliveryVehicleModels = [
+    // Budget (1-3h range, low income)
     { tier: "Budget", name: "Roller Skates", cost: 300.00, income: 0.30, range: 3600 },    // 1h
-    { tier: "Budget", name: "Bike", cost: 500.00, income: 0.50, range: 7200 },           // 2h
-    { tier: "Budget", name: "Scooter", cost: 750.00, income: 0.65, range: 10800 },       // 3h
-    { tier: "Entry", name: "Motorcycle", cost: 1750.00, income: 1.90, range: 14400 },    // 4h
-    { tier: "Entry", name: "Compact Car", cost: 3000.00, income: 2.90, range: 18000 },   // 5h
-    { tier: "Entry", name: "Sedan", cost: 4200.00, income: 4.75, range: 21600 }         // 6h
+    { tier: "Budget", name: "Bike", cost: 500.00, income: 0.50, range: 7200 },            // 2h
+    { tier: "Budget", name: "Scooter", cost: 750.00, income: 0.65, range: 10800 },        // 3h
+
+    // Entry (3-5h range, medium income)
+    { tier: "Entry", name: "Motorcycle", cost: 1750.00, income: 1.90, range: 14400 },     // 4h
+    { tier: "Entry", name: "Compact Car", cost: 3000.00, income: 2.90, range: 18000 },    // 5h
+    { tier: "Entry", name: "Sedan", cost: 4200.00, income: 4.75, range: 21600 },          // 6h
+
+    // Mid (5-8h range, good income)
+    { tier: "Mid", name: "Van", cost: 6500.00, income: 7.50, range: 25200 },              // 7h
+    { tier: "Mid", name: "SUV", cost: 8500.00, income: 9.80, range: 28800 },              // 8h
+
+    // Premium (6-10h range, high income)
+    { tier: "Premium", name: "Electric Truck", cost: 14000.00, income: 16.00, range: 32400 }, // 9h
+    { tier: "Premium", name: "Sprinter Van", cost: 18000.00, income: 20.50, range: 36000 }, // 10h
+
+    // Elite (8-12h range, max income)
+    { tier: "Elite", name: "Cargo Van Fleet", cost: 28000.00, income: 32.00, range: 43200 }, // 12h
+    { tier: "Elite", name: "Autonomous Drone Swarm", cost: 35000.00, income: 41.00, range: 46800 } // 13h
 ];
 
 // Click for income button
@@ -151,6 +166,7 @@ function buyBusiness(typeId) {
         updateAllDisplays();
         renderOwnedBusinesses();
     }
+    saveGame();
 }
 
 // Update all displays
@@ -163,6 +179,7 @@ function updateAllDisplays() {
     updateTotalIPS();
     updateUpgradeButton();
     renderOwnedBusinesses();
+    saveGame();
 }
 
 // Upgrade business
@@ -177,6 +194,7 @@ function upgradeBusiness(index) {
     biz.upgradeCost = Math.round(biz.upgradeCost * businessCostMult * 100) / 100;
 
     updateAllDisplays();
+    saveGame();
 }
 
 // Sell business
@@ -206,6 +224,7 @@ function sellBusiness(index) {
 
     updateAllDisplays();
     alert(`Sold ${displayName} for $${totalSellPrice.toFixed(2)}!`);
+    saveGame();
 }
 
 // Render owned businesses
@@ -396,11 +415,11 @@ function openBusinessDetail(index) {
         };
 
         document.getElementById('expandSlotsBtn').onclick = () => {
-            if (money < 1000) {
-                alert("Can't afford expansion ($1,000)!");
+            if (money < 10000) {
+                alert("Can't afford expansion ($10,000)!");
                 return;
             }
-            money -= 1000;
+            money -= 10000;
             biz.fleetSlots += 5;
             updateAllDisplays();
             openBusinessDetail(index);
@@ -457,17 +476,51 @@ setInterval(() => {
     }
 }, 1000);
 
-// Initial setup
-maxSlotsDisplay.textContent = maxBusinessSlots;
-slotsUsedDisplay.textContent = '0';
-clickPowerDisplay.textContent = clickPower.toFixed(2);
-clickUpgradeCostDisplay.textContent = clickUpgradeCost.toFixed(2);
+// Save game function
+function saveGame() {
+    const saveData = {
+        money: money,
+        clickPower: clickPower,
+        clickUpgradeLevel: clickUpgradeLevel,
+        clickUpgradeCost: clickUpgradeCost,
+        ownedBusinesses: ownedBusinesses,
+        version: 1
+    };
+    localStorage.setItem('businessClickerSave', JSON.stringify(saveData));
+}
 
-updateTotalIPS();
-updateUpgradeButton();
+// Load game function
+function loadGame() {
+    const saved = localStorage.getItem('businessClickerSave');
+    if (!saved) return false;
 
-renderOwnedBusinesses();
+    try {
+        const data = JSON.parse(saved);
+        if (data.version === 1) {
+            money = data.money || 0;
+            clickPower = data.clickPower || 1;
+            clickUpgradeLevel = data.clickUpgradeLevel || 0;
+            clickUpgradeCost = data.clickUpgradeCost || 25.00;
+            ownedBusinesses = data.ownedBusinesses || [];
+            return true;
+        }
+    } catch (e) {
+        console.error("Save load failed", e);
+        return false;
+    }
+    return false;
+}
 
+// Autosave every 10 seconds
+setInterval(saveGame, 10000);
 
+// Load game on start
+const loaded = loadGame();
+if (loaded) {
+    console.log("Game loaded from save");
+} else {
+    console.log("No save found — starting new game");
+}
 
-
+// Update displays with loaded data
+updateAllDisplays();
